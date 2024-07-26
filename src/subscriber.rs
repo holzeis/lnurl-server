@@ -12,7 +12,7 @@ use std::time::Duration;
 use tonic_openssl_lnd::lnrpc::invoice::InvoiceState;
 use tonic_openssl_lnd::{lnrpc, LndLightningClient};
 
-const RELAYS: [&str; 8] = [
+const RELAYS: [&str; 10] = [
     "wss://nostr.mutinywallet.com",
     "wss://relay.snort.social",
     "wss://relay.nostr.band",
@@ -21,6 +21,8 @@ const RELAYS: [&str; 8] = [
     "wss://nostr.fmt.wiz.biz",
     "wss://relay.damus.io",
     "wss://nostr.wine",
+    "wss://relay.holzeis.me",
+    "wss://relay.primal.net"
 ];
 
 pub async fn start_invoice_subscription(db: Db, mut lnd: LndLightningClient, key: Keys) {
