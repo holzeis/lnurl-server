@@ -12,23 +12,11 @@ use std::time::Duration;
 use tonic_openssl_lnd::lnrpc::invoice::InvoiceState;
 use tonic_openssl_lnd::{lnrpc, LndLightningClient};
 
-const RELAYS: [&str; 10] = [
-    "wss://nostr.mutinywallet.com",
-    "wss://relay.snort.social",
-    "wss://relay.nostr.band",
-    "wss://eden.nostr.land",
-    "wss://nos.lol",
-    "wss://nostr.fmt.wiz.biz",
-    "wss://relay.damus.io",
-    "wss://nostr.wine",
-    "wss://relay.holzeis.me",
-    "wss://relay.primal.net"
-];
-
-pub async fn start_invoice_subscription(db: Db, mut lnd: LndLightningClient, key: Keys) {
+pub async fn start_invoice_subscription(db: Db, mut lnd: LndLightningClient, key: Keys, relays: Vec<String>) {
     loop {
         println!("Starting invoice subscription");
 
+        let relays = relays.clone();
         let sub = lnrpc::InvoiceSubscription::default();
         let mut invoice_stream = lnd
             .subscribe_invoices(sub)
@@ -45,19 +33,22 @@ pub async fn start_invoice_subscription(db: Db, mut lnd: LndLightningClient, key
                 Some(InvoiceState::Settled) => {
                     let db = db.clone();
                     let key = key.clone();
-                    tokio::spawn(async move {
-                        let fut =
-                            handle_paid_invoice(&db, hex::encode(ln_invoice.r_hash), key.clone());
+                    tokio::spawn({
+                        let relays = relays.clone();
+                        async move {
+                            let fut =
+                                handle_paid_invoice(&db, hex::encode(ln_invoice.r_hash), key.clone(), relays.clone());
 
-                        match tokio::time::timeout(Duration::from_secs(30), fut).await {
-                            Ok(Ok(_)) => {
-                                println!("Handled paid invoice!");
-                            }
-                            Ok(Err(e)) => {
-                                eprintln!("Failed to handle paid invoice: {}", e);
-                            }
-                            Err(_) => {
-                                eprintln!("Timeout");
+                            match tokio::time::timeout(Duration::from_secs(30), fut).await {
+                                Ok(Ok(_)) => {
+                                    println!("Handled paid invoice!");
+                                }
+                                Ok(Err(e)) => {
+                                    eprintln!("Failed to handle paid invoice: {}", e);
+                                }
+                                Err(_) => {
+                                    eprintln!("Timeout");
+                                }
                             }
                         }
                     });
@@ -71,7 +62,7 @@ pub async fn start_invoice_subscription(db: Db, mut lnd: LndLightningClient, key
     }
 }
 
-async fn handle_paid_invoice(db: &Db, payment_hash: String, keys: Keys) -> anyhow::Result<()> {
+async fn handle_paid_invoice(db: &Db, payment_hash: String, keys: Keys, relays: Vec<String>) -> anyhow::Result<()> {
     match get_zap(db, payment_hash.clone())? {
         None => Ok(()),
         Some(mut zap) => {
@@ -112,7 +103,7 @@ async fn handle_paid_invoice(db: &Db, payment_hash: String, keys: Keys) -> anyho
 
             // Create new client
             let client = Client::new(&keys);
-            client.add_relays(RELAYS).await?;
+            client.add_relays(relays).await?;
             client.connect().await;
 
             let event_id = client.send_event(event).await?;

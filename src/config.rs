@@ -20,6 +20,9 @@ pub struct Config {
     #[clap(default_value_t = 10009, long)]
     /// Port of the GRPC server for lnd
     pub lnd_port: u32,
+    #[arg(num_args(0..))]
+    #[clap(long)]
+    pub relay: Vec<String>,
     #[clap(default_value_t = Network::Bitcoin, short, long)]
     /// Network lnd is running on ["bitcoin", "testnet", "signet, "regtest"]
     pub network: Network,

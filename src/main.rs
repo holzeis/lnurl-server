@@ -32,11 +32,14 @@ pub struct State {
     pub keys: Keys,
     pub domain: String,
     pub route_hints: bool,
+    pub relays: Vec<String>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config: Config = Config::parse();
+
+    let relays = config.clone().relay;
 
     let mut client = tonic_openssl_lnd::connect(
         config.lnd_host.clone(),
@@ -83,6 +86,7 @@ async fn main() -> anyhow::Result<()> {
         keys: keys.clone(),
         domain: config.domain.clone(),
         route_hints: config.route_hints,
+        relays
     };
 
     let addr: std::net::SocketAddr = format!("{}:{}", config.bind, config.port)
@@ -110,6 +114,7 @@ async fn main() -> anyhow::Result<()> {
         state.db.clone(),
         state.lnd.clone(),
         keys,
+        state.relays,
     ));
 
     let graceful = server.with_graceful_shutdown(async {
