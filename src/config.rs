@@ -5,6 +5,9 @@ use clap::Parser;
 #[command(version, author, about)]
 /// A simple LNURL pay server. Allows you to have a lightning address for your own node.
 pub struct Config {
+    #[clap(default_value_t = String::from("keys.json"), long)]
+    /// Location of keys file
+    pub keys_file: String,
     #[clap(default_value_t = String::from("."), long)]
     /// Location of database and keys files
     pub data_dir: String,

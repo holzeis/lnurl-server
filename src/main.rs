@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{BufReader, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use axum::http::{Method, StatusCode, Uri};
 use axum::routing::get;
@@ -72,13 +72,7 @@ async fn main() -> anyhow::Result<()> {
     // DB management
     let db = sled::open(&db_path)?;
 
-    let keys_path = {
-        let mut path = path.clone();
-        path.push("keys.json");
-        path
-    };
-
-    let keys = get_keys(keys_path);
+    let keys = get_keys(&config.keys_file);
 
     let state = State {
         db,
@@ -150,8 +144,9 @@ impl NostrKeys {
     }
 }
 
-fn get_keys(path: PathBuf) -> Keys {
-    match File::open(&path) {
+fn get_keys(path: &str) -> Keys {
+    let path = Path::new(path);
+    match File::open(path) {
         Ok(file) => {
             let reader = BufReader::new(file);
             let n: NostrKeys = from_reader(reader).expect("Could not parse JSON");
